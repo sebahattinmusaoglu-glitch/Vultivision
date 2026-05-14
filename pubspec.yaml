@@ -1,0 +1,51 @@
+name: vultivision
+description: YouTube as TV — watch your favorite channels like television.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # YouTube WebView player
+  webview_flutter: ^4.10.0
+
+  # WebView Android platform
+  webview_flutter_android: ^4.3.0
+  
+  # HTTP istekleri
+  http: ^1.2.0
+  
+  # Güvenli API key saklama
+  flutter_dotenv: ^5.1.0
+  
+  # Google Sign-In (YouTube OAuth)
+  google_sign_in: ^6.2.1
+  
+  # Local storage (gruplar için)
+  shared_preferences: ^2.2.2
+  
+  # İkon paketi
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/icon.png"
