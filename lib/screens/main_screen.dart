@@ -18,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
   final StorageService _storage = StorageService();
   List<Group> _groups = [];
   bool _isLoading = true;
-  int _currentIndex = 1;
+  int _currentIndex = 0; // 0 = Groups, 1 = Settings
 
   @override
   void initState() {
@@ -34,6 +34,18 @@ class _MainScreenState extends State<MainScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _openPlayer() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => PlayerScreen(
+          groups: _groups,
+          onGroupsChanged: _loadGroups,
+        ),
+      ),
+    );
   }
 
   @override
@@ -58,13 +70,6 @@ class _MainScreenState extends State<MainScreen> {
         index: _currentIndex,
         children: [
           Material(
-            color: Colors.black,
-            child: PlayerScreen(
-              groups: _groups,
-              onGroupsChanged: _loadGroups,
-            ),
-          ),
-          Material(
             color: AppColors.background,
             child: GroupsScreen(
               groups: _groups,
@@ -87,7 +92,7 @@ class _MainScreenState extends State<MainScreen> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withOpacity(0.12),
               width: 1,
             ),
           ),
@@ -98,25 +103,25 @@ class _MainScreenState extends State<MainScreen> {
             child: Row(
               children: [
                 _NavItem(
-                  icon: Icons.tv_outlined,
-                  activeIcon: Icons.tv,
-                  label: 'Watch',
+                  icon: Icons.grid_view_outlined,
+                  activeIcon: Icons.grid_view,
+                  label: 'Groups',
                   isActive: _currentIndex == 0,
                   onTap: () => setState(() => _currentIndex = 0),
                 ),
                 _NavItem(
-                  icon: Icons.grid_view_outlined,
-                  activeIcon: Icons.grid_view,
-                  label: 'Groups',
-                  isActive: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
+                  icon: Icons.tv_outlined,
+                  activeIcon: Icons.tv,
+                  label: 'Watch',
+                  isActive: false, // Watch her zaman route olarak açılır
+                  onTap: _openPlayer,
                 ),
                 _NavItem(
                   icon: Icons.person_outline,
                   activeIcon: Icons.person,
                   label: 'Settings',
-                  isActive: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  isActive: _currentIndex == 1,
+                  onTap: () => setState(() => _currentIndex = 1),
                 ),
               ],
             ),
@@ -153,14 +158,14 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               isActive ? activeIcon : icon,
-              color: isActive ? AppColors.primary : AppColors.textTertiary,
+              color: isActive ? AppColors.primary : Colors.white54,
               size: 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: isActive ? AppColors.primary : AppColors.textTertiary,
+                color: isActive ? AppColors.primary : Colors.white54,
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),

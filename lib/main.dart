@@ -3,11 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/welcome_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  
+
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
+
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -17,11 +22,12 @@ void main() async {
     systemNavigationBarContrastEnforced: false,
   ));
 
-  runApp(const ProjectTVApp());
+  runApp(ProjectTVApp(isFirstLaunch: isFirstLaunch));
 }
 
 class ProjectTVApp extends StatelessWidget {
-  const ProjectTVApp({super.key});
+  final bool isFirstLaunch;
+  const ProjectTVApp({super.key, required this.isFirstLaunch});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +35,7 @@ class ProjectTVApp extends StatelessWidget {
       title: 'Vultivision',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const WelcomeScreen(),
+      home: isFirstLaunch ? const WelcomeScreen() : const MainScreen(),
     );
   }
 }
