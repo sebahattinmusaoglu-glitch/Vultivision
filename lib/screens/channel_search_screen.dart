@@ -8,8 +8,14 @@ import '../services/youtube_service.dart';
 class ChannelSearchScreen extends StatefulWidget {
   final String groupName;
   final String? existingGroupId;
+  final String? initialQuery; // Kategori preseti için otomatik arama
 
-  const ChannelSearchScreen({super.key, required this.groupName, this.existingGroupId});
+  const ChannelSearchScreen({
+    super.key,
+    required this.groupName,
+    this.existingGroupId,
+    this.initialQuery,
+  });
 
   @override
   State<ChannelSearchScreen> createState() => _ChannelSearchScreenState();
@@ -25,6 +31,18 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
   bool _isSearching = false;
   bool _isSaving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Kategori preseti varsa ekranı açar açmaz ara
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _searchController.text = widget.initialQuery!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _search(widget.initialQuery!);
+      });
+    }
+  }
 
   Future<void> _search(String query) async {
     if (query.trim().isEmpty) return;
@@ -80,7 +98,6 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
       final groups = await _storage.loadGroups();
       final existing = groups.firstWhere((g) => g.id == widget.existingGroupId);
       final merged = [...existing.channels, ..._selectedChannels];
-      // Duplicate'leri temizle
       final unique = {for (var c in merged) c.id: c}.values.toList();
       await _storage.updateGroup(existing.copyWith(channels: unique));
     } else {
@@ -194,7 +211,7 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: TextField(
                 controller: _searchController,
-                autofocus: true,
+                autofocus: widget.initialQuery == null,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 16,
@@ -263,10 +280,10 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
                                   ),
                                   leading: CircleAvatar(
                                     radius: 24,
-                                    backgroundImage: channel
-                                            .thumbnailUrl.isNotEmpty
-                                        ? NetworkImage(channel.thumbnailUrl)
-                                        : null,
+                                    backgroundImage:
+                                        channel.thumbnailUrl.isNotEmpty
+                                            ? NetworkImage(channel.thumbnailUrl)
+                                            : null,
                                     backgroundColor: AppColors.surfaceVariant,
                                     child: channel.thumbnailUrl.isEmpty
                                         ? const Icon(Icons.tv,

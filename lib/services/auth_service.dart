@@ -54,7 +54,7 @@ class AuthService {
   // SONRA (doğru) — _googleSignIn üzerinde çağrılıyor
   Future<bool> requestYouTubeScope() async {
     try {
-      final granted = await _googleSignIn.requestScopes([    // ✅
+      final granted = await _googleSignIn.requestScopes([    // 
         'https://www.googleapis.com/auth/youtube.readonly',
       ]);
       return granted;
@@ -66,7 +66,7 @@ class AuthService {
   Future<bool> hasYouTubeScope() async {
     // v6'da grantedScopes yok — token alınabiliyorsa scope verilmiş demektir
     try {
-      final token = await getYouTubeAccessToken();           // ✅
+      final token = await getYouTubeAccessToken();           //
       return token != null;
     } catch (e) {
       return false;
