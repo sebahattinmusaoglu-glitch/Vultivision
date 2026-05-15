@@ -4,131 +4,230 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/channel.dart';
 import '../models/video.dart';
+import 'auth_service.dart';
 
+/// YouTube Data API v3 servisi.
+/// - API key  → search, kanal detayı, video yükleme (auth gerektirmez)
+/// - OAuth    → abonelikler (authService gerektirir)
 class YouTubeService {
-  static const String _baseUrl = 'https://www.googleapis.com/youtube/v3';
-  final Random _random = Random();
+  final AuthService? _authService;
 
-  String get _apiKey => dotenv.env['YOUTUBE_API_KEY'] ?? '';
+  static const _base = 'https://www.googleapis.com/youtube/v3';
+  static const _maxRetries = 2;
 
-  // Kanal arama (quota: 100 unit)
-  Future<List<Channel>> searchChannels(String query) async {
-    final uri = Uri.parse(
-      '$_baseUrl/search'
-      '?part=snippet'
-      '&type=channel'
-      '&q=${Uri.encodeComponent(query)}'
-      '&maxResults=10'
-      '&key=$_apiKey',
+  /// [authService] yalnızca OAuth gerektiren metodlar için gereklidir
+  /// (getSubscriptions). Diğer metodlar API key ile çalışır.
+  YouTubeService({AuthService? authService}) : _authService = authService;
+
+  // ─── Yardımcılar ────────────────────────────────────────────────────────
+
+  String get _apiKey {
+    final key = dotenv.env['YOUTUBE_API_KEY'] ?? '';
+    if (key.isEmpty) {
+      throw YouTubeConfigException('YOUTUBE_API_KEY .env dosyasında bulunamadı.');
+    }
+    return key;
+  }
+
+  Uri _apiUri(String endpoint, Map<String, String> params) {
+    return Uri.parse('$_base/$endpoint').replace(
+      queryParameters: {...params, 'key': _apiKey},
     );
+  }
 
-    final response = await http.get(uri);
-    _checkResponse(response);
+  Future<Map<String, dynamic>> _get(
+    Uri uri, {
+    Map<String, String>? headers,
+  }) async {
+    final response = await http.get(uri, headers: headers);
+    if (response.statusCode == 401) {
+      throw YouTubeAuthException('Token geçersiz veya süresi dolmuş.');
+    }
+    if (response.statusCode == 403) {
+      throw YouTubeQuotaException('API kotası aşıldı veya erişim reddedildi.');
+    }
+    if (response.statusCode != 200) {
+      throw YouTubeApiException(
+        'API hatası: ${response.statusCode}',
+        response.statusCode,
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
-    final items = data['items'] as List<dynamic>;
+  Future<Map<String, String>> _oauthHeaders() async {
+    if (_authService == null) {
+      throw YouTubeAuthException('OAuth için AuthService gereklidir.');
+    }
+    final token = await _authService!.getYouTubeAccessToken();
+    if (token == null) {
+      throw YouTubeAuthException(
+        'Access token alınamadı — kullanıcı giriş yapmamış olabilir.',
+      );
+    }
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  // ─── Kanal arama (API key) ───────────────────────────────────────────────
+
+  /// Sorguya göre YouTube kanallarını arar.
+  Future<List<Channel>> searchChannels(String query) async {
+    final uri = _apiUri('search', {
+      'part': 'snippet',
+      'type': 'channel',
+      'q': query,
+      'maxResults': '10',
+    });
+
+    final data = await _get(uri);
+    final items = data['items'] as List? ?? [];
+
     return items
-        .map((item) => Channel.fromSearchJson(item as Map<String, dynamic>))
+        .map((item) => Channel.fromSearchJson(item))
+        .where((c) => c.id.isNotEmpty)
         .toList();
   }
 
-  // Kanal detayı + abone sayısı (quota: 1 unit)
+  // ─── Kanal detayı (API key) ──────────────────────────────────────────────
+
+  /// Tek bir kanalın snippet + statistics detayını döner.
   Future<Channel> getChannelDetails(String channelId) async {
-    final uri = Uri.parse(
-      '$_baseUrl/channels'
-      '?part=snippet,statistics,contentDetails'
-      '&id=$channelId'
-      '&key=$_apiKey',
-    );
+    final uri = _apiUri('channels', {
+      'part': 'snippet,statistics',
+      'id': channelId,
+    });
 
-    final response = await http.get(uri);
-    _checkResponse(response);
+    final data = await _get(uri);
+    final items = data['items'] as List?;
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
-    final items = data['items'] as List<dynamic>;
-    if (items.isEmpty) throw Exception('Kanal bulunamadı');
-
-    return Channel.fromDetailsJson(items.first as Map<String, dynamic>);
+    if (items == null || items.isEmpty) {
+      throw YouTubeApiException('Kanal bulunamadı: $channelId', 404);
+    }
+    return Channel.fromDetailsJson(items.first);
   }
 
-  // Kanalın uploads playlist ID'sini al
-  Future<String> _getUploadsPlaylistId(String channelId) async {
-    final uri = Uri.parse(
-      '$_baseUrl/channels'
-      '?part=contentDetails'
-      '&id=$channelId'
-      '&key=$_apiKey',
-    );
+  // ─── Rastgele video (API key) ────────────────────────────────────────────
 
-    final response = await http.get(uri);
-    _checkResponse(response);
+  /// Verilen kanal listesinden rastgele bir video seçer.
+  /// Kanal boş çıkarsa başka bir kanal dener (maks [_maxRetries] kez).
+  Future<Video> getRandomVideoFromChannels(List<Channel> channels) async {
+    if (channels.isEmpty) {
+      throw YouTubeApiException('Kanal listesi boş.', 400);
+    }
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
-    final items = data['items'] as List<dynamic>;
-    if (items.isEmpty) throw Exception('Kanal bulunamadı');
+    final rng = Random();
+    final shuffled = [...channels]..shuffle(rng);
 
-    final contentDetails =
-        (items.first as Map<String, dynamic>)['contentDetails']
-            as Map<String, dynamic>;
-    return contentDetails['relatedPlaylists']['uploads'] as String;
+    for (var i = 0; i < min(shuffled.length, _maxRetries + 1); i++) {
+      try {
+        final channel = shuffled[i];
+        final videos = await _getChannelVideos(channel.id);
+        if (videos.isNotEmpty) {
+          return videos[rng.nextInt(videos.length)];
+        }
+      } catch (_) {
+        continue; // Sonraki kanala geç
+      }
+    }
+    throw YouTubeApiException('Hiçbir kanalda video bulunamadı.', 404);
   }
 
-  // Kanalın son videolarını getir (quota: 1 unit)
-  Future<List<Video>> getChannelVideos(String channelId,
-      {int maxResults = 50}) async {
-    final playlistId = await _getUploadsPlaylistId(channelId);
+  /// Kanalın son yüklemelerini döner (upload playlist üzerinden).
+  Future<List<Video>> _getChannelVideos(
+    String channelId, {
+    int maxResults = 30,
+  }) async {
+    // 1. Upload playlist ID'sini al
+    final channelUri = _apiUri('channels', {
+      'part': 'contentDetails',
+      'id': channelId,
+    });
+    final channelData = await _get(channelUri);
+    final uploadPlaylistId = channelData['items']?[0]?['contentDetails']
+        ?['relatedPlaylists']?['uploads'] as String?;
 
-    final uri = Uri.parse(
-      '$_baseUrl/playlistItems'
-      '?part=snippet'
-      '&playlistId=$playlistId'
-      '&maxResults=$maxResults'
-      '&key=$_apiKey',
-    );
+    if (uploadPlaylistId == null) return [];
 
-    final response = await http.get(uri);
-    _checkResponse(response);
+    // 2. Playlist öğelerini çek
+    final playlistUri = _apiUri('playlistItems', {
+      'part': 'snippet',
+      'playlistId': uploadPlaylistId,
+      'maxResults': '$maxResults',
+    });
+    final playlistData = await _get(playlistUri);
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
-    final items = data['items'] as List<dynamic>;
-
-    return items
-        .map((item) =>
-            Video.fromPlaylistJson(item as Map<String, dynamic>))
+    return (playlistData['items'] as List? ?? [])
+        .map((item) => Video.fromPlaylistJson(item))
         .where((v) => v.id.isNotEmpty)
         .toList();
   }
 
-  // Birden fazla kanaldan rastgele video seç
-  Future<Video> getRandomVideoFromChannels(List<Channel> channels) async {
-    if (channels.isEmpty) throw Exception('Channel list is empty');
+  // ─── Abonelikler (OAuth) ─────────────────────────────────────────────────
 
-  // 3 deneme hakkı — farklı kanallar dene
-  for (int attempt = 0; attempt < 3; attempt++) {
-    try {
-    final channel = channels[_random.nextInt(channels.length)];
-    final videos = await getChannelVideos(channel.id);
+  /// Giriş yapmış kullanıcının abone olduğu kanalları döner.
+  /// Gereksinim: constructor'a [authService] verilmiş olmalı.
+  Future<List<Channel>> getSubscriptions({int maxResults = 50}) async {
+    final headers = await _oauthHeaders();
+    final uri = Uri.parse(
+      '$_base/subscriptions'
+      '?part=snippet'
+      '&mine=true'
+      '&maxResults=$maxResults'
+      '&order=alphabetical',
+    );
 
-   // Boş ID'leri filtrele
-    final validVideos = videos
-          .where((v) => v.id.isNotEmpty && v.id.length == 11)
-          .toList();
-
-    return validVideos[_random.nextInt(validVideos.length)];
-    } catch (_) {
-      continue;
-    }
+    final data = await _get(uri, headers: headers);
+    return (data['items'] as List? ?? [])
+        .map((item) => _channelFromSubscriptionItem(item))
+        .toList();
   }
 
-  throw Exception('Could not load a valid video. Please try again.');
+  Channel _channelFromSubscriptionItem(Map<String, dynamic> item) {
+    final snippet = item['snippet'] as Map<String, dynamic>;
+    final resourceId = snippet['resourceId'] as Map<String, dynamic>;
+    final thumbs = snippet['thumbnails'] as Map<String, dynamic>?;
+    final thumbUrl =
+        (thumbs?['medium'] ?? thumbs?['default'])?['url'] as String? ?? '';
+
+    return Channel(
+      id: resourceId['channelId'] as String,
+      title: snippet['title'] as String,
+      thumbnailUrl: thumbUrl,
+      subscriberCount: '',
+    );
+  }
 }
 
-  void _checkResponse(http.Response response) {
-    if (response.statusCode != 200) {
-      final body = json.decode(response.body) as Map<String, dynamic>;
-      final error = body['error'] as Map<String, dynamic>?;
-      final message = error?['message'] ?? 'Bilinmeyen hata';
-      throw Exception('YouTube API hatası: $message');
-    }
-  }
+// ─── İstisnalar ─────────────────────────────────────────────────────────────
+
+class YouTubeConfigException implements Exception {
+  final String message;
+  const YouTubeConfigException(this.message);
+  @override
+  String toString() => 'YouTubeConfigException: $message';
+}
+
+class YouTubeAuthException implements Exception {
+  final String message;
+  const YouTubeAuthException(this.message);
+  @override
+  String toString() => 'YouTubeAuthException: $message';
+}
+
+class YouTubeQuotaException implements Exception {
+  final String message;
+  const YouTubeQuotaException(this.message);
+  @override
+  String toString() => 'YouTubeQuotaException: $message';
+}
+
+class YouTubeApiException implements Exception {
+  final String message;
+  final int statusCode;
+  const YouTubeApiException(this.message, this.statusCode);
+  @override
+  String toString() => 'YouTubeApiException($statusCode): $message';
 }
