@@ -42,4 +42,17 @@ class StorageService {
     groups.removeWhere((g) => g.id == groupId);
     await saveGroups(groups);
   }
+
+  static const String _defaultGroupKey = 'defaultGroupId';
+
+Future<String?> getDefaultGroupId() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString(_defaultGroupKey);
+}
+
+Future<void> setDefaultGroupId(String groupId) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_defaultGroupKey, groupId);
+}
+
 }

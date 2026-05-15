@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1095139060400",
+    "project_id": "vultivision",
+    "storage_bucket": "vultivision.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1095139060400:android:45f1007ca320758619e975",
+        "android_client_info": {
+          "package_name": "com.zennappstudio.vultivision"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1095139060400-c1iit1dfbqfs6valpjuafpicvosr1gjj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zennappstudio.vultivision",
+            "certificate_hash": "a8c5e8a0c974ff23f2fc02136e5eb85c6b38f48e"
+          }
+        },
+        {
+          "client_id": "1095139060400-vukkbgcqt2rqjd9g4e4nkl7ciiobr482.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfdOohIl63VtkcqylsfikCltAwsGuriNQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1095139060400-vukkbgcqt2rqjd9g4e4nkl7ciiobr482.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  google_sign_in: ^6.2.1 # Google ile giriş desteği
   
   # YouTube WebView player
   webview_flutter: ^4.10.0
@@ -21,9 +26,6 @@ dependencies:
   
   # Güvenli API key saklama
   flutter_dotenv: ^5.1.0
-  
-  # Google Sign-In (YouTube OAuth)
-  google_sign_in: ^6.2.1
   
   # Local storage (gruplar için)
   shared_preferences: ^2.3.0

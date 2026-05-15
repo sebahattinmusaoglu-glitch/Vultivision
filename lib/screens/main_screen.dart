@@ -7,6 +7,8 @@ import 'groups_screen.dart';
 import 'settings_screen.dart';
 import 'empty_state_screen.dart';
 
+
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -36,12 +38,24 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _openPlayer() {
+  void _openPlayer() async {
+    final defaultGroupId = await _storage.getDefaultGroupId();
+    Group? defaultGroup;
+    if (defaultGroupId != null) {
+      try {
+        defaultGroup = _groups.firstWhere((g) => g.id == defaultGroupId);
+      } catch (_) {
+        // Silinmiş bir grup kaydedilmişse ignore
+      }
+    }
+
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => PlayerScreen(
           groups: _groups,
+          initialGroup: defaultGroup,
           onGroupsChanged: _loadGroups,
         ),
       ),

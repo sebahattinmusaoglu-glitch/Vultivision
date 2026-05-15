@@ -12,11 +12,13 @@ import 'settings_screen.dart';
 class PlayerScreen extends StatefulWidget {
   final List<Group> groups;
   final VoidCallback onGroupsChanged;
+  final Group? initialGroup;
 
   const PlayerScreen({
     super.key,
     required this.groups,
     required this.onGroupsChanged,
+    this.initialGroup,
   });
 
   @override
@@ -36,7 +38,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _currentGroup = widget.groups.first;
+    _currentGroup = widget.initialGroup ?? widget.groups.first;
     _loadRandomVideo();
     _startHideControlsTimer();
   }
