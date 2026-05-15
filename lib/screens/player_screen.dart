@@ -8,17 +8,20 @@ import '../services/youtube_service.dart';
 import '../widgets/youtube_webview_player.dart';
 import 'group_selection_sheet.dart';
 import 'settings_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PlayerScreen extends StatefulWidget {
   final List<Group> groups;
   final VoidCallback onGroupsChanged;
   final Group? initialGroup;
+  final String? defaultGroupId;
 
   const PlayerScreen({
     super.key,
     required this.groups,
     required this.onGroupsChanged,
-    this.initialGroup,
+    this.initialGroup, 
+    this.defaultGroupId, // ekle
   });
 
   @override
@@ -35,12 +38,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   String? _error;
   Timer? _hideControlsTimer;
 
+
   @override
-  void initState() {
-    super.initState();
-    _currentGroup = widget.initialGroup ?? widget.groups.first;
-    _loadRandomVideo();
-    _startHideControlsTimer();
+  void didUpdateWidget(PlayerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.defaultGroupId != widget.defaultGroupId ||
+        oldWidget.groups != widget.groups) {
+      _applyDefaultGroup();
+    }
+  }
+
+  Future<void> _applyDefaultGroup() async {
+    if (widget.defaultGroupId == null) return;
+    final match = widget.groups
+        .where((g) => g.id == widget.defaultGroupId)
+        .firstOrNull;
+    if (match != null && match.id != _currentGroup.id && mounted) {
+      setState(() => _currentGroup = match);
+      _loadRandomVideo();
+    }
   }
 
   @override
