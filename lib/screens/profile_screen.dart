@@ -5,23 +5,25 @@ import '../core/constants/app_colors.dart';
 import '../models/group.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
+import 'profile_screen.dart';
 
 // SharedPreferences key — StorageService ile tutarlı olsun diye burada sabit
 const _kDefaultGroupKey = 'default_group_id';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   final _storage = StorageService();
 
   List<Group> _groups = [];
   String? _defaultGroupId;
+  bool _excludeShorts = false;
   bool _checkingScope = false;
   bool? _youtubeGranted;
 
@@ -36,11 +38,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     final defaultId = prefs.getString(_kDefaultGroupKey);
     final youtubeGranted = await _authService.hasYouTubeScope();
+    final excludeShorts = await _storage.getExcludeShorts();
     if (mounted) {
       setState(() {
         _groups = groups;
         _defaultGroupId = defaultId;
         _youtubeGranted = youtubeGranted;
+        _excludeShorts = excludeShorts;
       });
     }
   }
@@ -67,6 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
+    
+
     final picked = await showModalBottomSheet<Group>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -82,6 +88,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) setState(() => _defaultGroupId = picked.id);
     }
   }
+
+  
+
 
   // ─── Auth ───────────────────────────────────────────────────────────
 
@@ -151,13 +160,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 28),
 
-              // ── Varsayılan grup ────────────────────────────────────
+// ── Varsayılan grup ────────────────────────────────────
               const _SectionHeader(label: 'Default Group'),
               const SizedBox(height: 12),
               _DefaultGroupCard(
                 group: _defaultGroup,
                 hasGroups: _groups.isNotEmpty,
                 onTap: _pickDefaultGroup,
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Video tercihleri ───────────────────────────────────
+              const _SectionHeader(label: 'Video Preferences'),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: _excludeShorts,
+                onChanged: (val) async {
+                  setState(() => _excludeShorts = val);
+                  await _storage.saveExcludeShorts(val);
+                },
+                title: const Text(
+                  'Exclude Shorts',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+                subtitle: const Text(
+                  'Hide videos shorter than 60 seconds',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                activeColor: AppColors.primary,
+                contentPadding: EdgeInsets.zero,
               ),
 
               const SizedBox(height: 28),

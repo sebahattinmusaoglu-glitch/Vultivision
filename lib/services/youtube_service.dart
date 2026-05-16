@@ -15,8 +15,6 @@ class YouTubeService {
   static const _base = 'https://www.googleapis.com/youtube/v3';
   static const _maxRetries = 2;
 
-  /// [authService] yalnızca OAuth gerektiren metodlar için gereklidir
-  /// (getSubscriptions). Diğer metodlar API key ile çalışır.
   YouTubeService({AuthService? authService}) : _authService = authService;
 
   // ─── Yardımcılar ────────────────────────────────────────────────────────
@@ -73,7 +71,6 @@ class YouTubeService {
 
   // ─── Kanal arama (API key) ───────────────────────────────────────────────
 
-  /// Sorguya göre YouTube kanallarını arar.
   Future<List<Channel>> searchChannels(String query) async {
     final uri = _apiUri('search', {
       'part': 'snippet',
@@ -93,7 +90,6 @@ class YouTubeService {
 
   // ─── Kanal detayı (API key) ──────────────────────────────────────────────
 
-  /// Tek bir kanalın snippet + statistics detayını döner.
   Future<Channel> getChannelDetails(String channelId) async {
     final uri = _apiUri('channels', {
       'part': 'snippet,statistics',
@@ -112,8 +108,11 @@ class YouTubeService {
   // ─── Rastgele video (API key) ────────────────────────────────────────────
 
   /// Verilen kanal listesinden rastgele bir video seçer.
-  /// Kanal boş çıkarsa başka bir kanal dener (maks [_maxRetries] kez).
-  Future<Video> getRandomVideoFromChannels(List<Channel> channels) async {
+  /// [excludeShorts] true ise 60 saniye ve altındaki videolar filtrelenir.
+  Future<Video> getRandomVideoFromChannels(
+    List<Channel> channels, {
+    bool excludeShorts = false,
+  }) async {
     if (channels.isEmpty) {
       throw YouTubeApiException('Kanal listesi boş.', 400);
     }
@@ -124,21 +123,26 @@ class YouTubeService {
     for (var i = 0; i < min(shuffled.length, _maxRetries + 1); i++) {
       try {
         final channel = shuffled[i];
-        final videos = await _getChannelVideos(channel.id);
+        final videos = await _getChannelVideos(
+          channel.id,
+          excludeShorts: excludeShorts,
+        );
         if (videos.isNotEmpty) {
           return videos[rng.nextInt(videos.length)];
         }
       } catch (_) {
-        continue; // Sonraki kanala geç
+        continue;
       }
     }
     throw YouTubeApiException('Hiçbir kanalda video bulunamadı.', 404);
   }
 
-  /// Kanalın son yüklemelerini döner (upload playlist üzerinden).
+  /// Kanalın son yüklemelerini döner.
+  /// [excludeShorts] true ise contentDetails çekilerek 60s altı videolar atılır.
   Future<List<Video>> _getChannelVideos(
     String channelId, {
     int maxResults = 30,
+    bool excludeShorts = false,
   }) async {
     // 1. Upload playlist ID'sini al
     final channelUri = _apiUri('channels', {
@@ -159,16 +163,52 @@ class YouTubeService {
     });
     final playlistData = await _get(playlistUri);
 
-    return (playlistData['items'] as List? ?? [])
+    final videos = (playlistData['items'] as List? ?? [])
         .map((item) => Video.fromPlaylistJson(item))
         .where((v) => v.id.isNotEmpty)
         .toList();
+
+    if (!excludeShorts || videos.isEmpty) return videos;
+
+    // 3. Shorts filtresi — video sürelerini toplu çek (tek API çağrısı)
+    final ids = videos.map((v) => v.id).join(',');
+    final detailsUri = _apiUri('videos', {
+      'part': 'contentDetails',
+      'id': ids,
+    });
+    final detailsData = await _get(detailsUri);
+
+    // video id → süre (saniye) map'i oluştur
+    final durationMap = <String, int>{};
+    for (final item in detailsData['items'] as List? ?? []) {
+      final id = item['id'] as String;
+      final iso = item['contentDetails']?['duration'] as String? ?? '';
+      durationMap[id] = _parseIsoDuration(iso);
+    }
+
+    // 60 saniyenin üzerindeki videoları tut
+    // Süresi bilinmiyorsa (API'den gelmemişse) dahil et
+    return videos.where((v) {
+      final seconds = durationMap[v.id];
+      return seconds == null || seconds > 60;
+    }).toList();
+  }
+
+  // ─── ISO 8601 süre parser ────────────────────────────────────────────────
+
+  /// "PT1H2M30S" → 3750 saniye
+  int _parseIsoDuration(String iso) {
+    if (iso.isEmpty) return 0;
+    final h = RegExp(r'(\d+)H').firstMatch(iso);
+    final m = RegExp(r'(\d+)M').firstMatch(iso);
+    final s = RegExp(r'(\d+)S').firstMatch(iso);
+    return (int.tryParse(h?.group(1) ?? '0') ?? 0) * 3600 +
+        (int.tryParse(m?.group(1) ?? '0') ?? 0) * 60 +
+        (int.tryParse(s?.group(1) ?? '0') ?? 0);
   }
 
   // ─── Abonelikler (OAuth) ─────────────────────────────────────────────────
 
-  /// Giriş yapmış kullanıcının abone olduğu kanalları döner.
-  /// Gereksinim: constructor'a [authService] verilmiş olmalı.
   Future<List<Channel>> getSubscriptions({int maxResults = 50}) async {
     final headers = await _oauthHeaders();
     final uri = Uri.parse(

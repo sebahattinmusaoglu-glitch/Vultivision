@@ -60,4 +60,18 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_defaultGroupIdKey);
   }
+
+  // ── Exclude Shorts ───────────────────────────────────────────────────────
+
+  static const String _excludeShortsKey = 'exclude_shorts';
+
+  Future<bool> getExcludeShorts() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_excludeShortsKey) ?? false;
+  }
+
+  Future<void> saveExcludeShorts(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_excludeShortsKey, value);
+  }
 }

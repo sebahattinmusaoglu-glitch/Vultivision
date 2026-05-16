@@ -6,7 +6,8 @@ import '../models/video.dart';
 import '../services/youtube_service.dart';
 import '../widgets/youtube_webview_player.dart';
 import 'group_selection_sheet.dart';
-import 'settings_screen.dart';
+import 'profile_screen.dart';
+import '../services/storage_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final List<Group> groups;
@@ -33,6 +34,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   late Group _currentGroup;
   Video? _currentVideo;
+  bool _excludeShorts = false;
   bool _isLoadingVideo = true;
   bool _controlsVisible = true;
   String? _error;
@@ -48,8 +50,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
       (g) => g.id == widget.defaultGroupId,
       orElse: () => widget.groups.first,
     );
-    _loadRandomVideo();
-    _startHideControlsTimer();
+    StorageService().getExcludeShorts().then((v) {
+      if (mounted) {
+        setState(() => _excludeShorts = v);
+        _loadRandomVideo();        // ← tercih geldikten sonra yükle
+        _startHideControlsTimer();
+      }
+    });
   }
 
   @override
@@ -65,8 +72,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (newGroup.id != _currentGroup.id) {
         setState(() => _currentGroup = newGroup);
         _loadRandomVideo();
+        return; // ← zaten yüklendi, aşağıya geçme
       }
     }
+
+    // Grup değişmedi ama Settings'ten gelmiş olabilir — excludeShorts kontrol et
+    StorageService().getExcludeShorts().then((v) {
+      if (mounted && v != _excludeShorts) {
+        setState(() => _excludeShorts = v);
+        _loadRandomVideo();
+      }
+    });
   }
 
   @override
@@ -84,6 +100,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     try {
       final video = await _youtube.getRandomVideoFromChannels(
         _currentGroup.channels,
+        excludeShorts: _excludeShorts,
       );
       if (mounted) {
         setState(() {

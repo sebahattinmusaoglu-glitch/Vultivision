@@ -4,7 +4,7 @@ import '../models/group.dart';
 import '../services/storage_service.dart';
 import 'player_screen.dart';
 import 'groups_screen.dart';
-import 'settings_screen.dart';
+import 'profile_screen.dart';
 import 'empty_state_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -44,16 +44,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onTabChanged(int index) {
-    final comingFromSettings = _currentIndex == 2 && index == 0;
+    final comingFromSettings = _currentIndex == 2 && index == 1; // Watch: 1
     setState(() {
       _currentIndex = index;
-      if (index != 0) _isImmersive = false;
+      if (index != 1) _isImmersive = false;
     });
     if (comingFromSettings) _loadGroups();
   }
 
   void _onImmersiveChanged(bool immersive) {
-    if (_currentIndex == 0) setState(() => _isImmersive = immersive);
+    if (_currentIndex == 1) setState(() => _isImmersive = immersive);
   }
 
   @override
@@ -82,28 +82,9 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          Material(
-            color: Colors.black,
-            child: PlayerScreen(
-              groups: _groups,
-              onGroupsChanged: _loadGroups,
-              defaultGroupId: _defaultGroupId,
-              onImmersiveChanged: _onImmersiveChanged,
-              onOpenSettings: () => _onTabChanged(2),
-            ),
-          ),
-          Material(
-            color: AppColors.background,
-            child: GroupsScreen(
-              groups: _groups,
-              onGroupsChanged: _loadGroups,
-              onSwitchToWatch: () => _onTabChanged(0),
-            ),
-          ),
-          Material(
-            color: AppColors.background,
-            child: const SettingsScreen(),
-          ),
+          Material(color: AppColors.background, child: GroupsScreen(groups: _groups, onGroupsChanged: _loadGroups, onSwitchToWatch: () => _onTabChanged(1),),),
+          Material(color: Colors.black, child: PlayerScreen(groups: _groups, onGroupsChanged: _loadGroups, defaultGroupId: _defaultGroupId, onImmersiveChanged: _onImmersiveChanged, onOpenSettings: () => _onTabChanged(2),),),
+          Material(color: AppColors.background, child: const ProfileScreen(),),
         ],
       ),
     );
@@ -126,27 +107,9 @@ class _MainScreenState extends State<MainScreen> {
               height: 56,
               child: Row(
                 children: [
-                  _NavItem(
-                    icon: Icons.tv_outlined,
-                    activeIcon: Icons.tv,
-                    label: 'Watch',
-                    isActive: _currentIndex == 0,
-                    onTap: () => _onTabChanged(0),
-                  ),
-                  _NavItem(
-                    icon: Icons.grid_view_outlined,
-                    activeIcon: Icons.grid_view,
-                    label: 'Groups',
-                    isActive: _currentIndex == 1,
-                    onTap: () => _onTabChanged(1),
-                  ),
-                  _NavItem(
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
-                    label: 'Settings',
-                    isActive: _currentIndex == 2,
-                    onTap: () => _onTabChanged(2),
-                  ),
+                  _NavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view, label: 'Groups', isActive: _currentIndex == 0, onTap: () => _onTabChanged(0)),
+                  _NavItem(icon: Icons.tv_outlined, activeIcon: Icons.tv, label: 'Watch', isActive: _currentIndex == 1, onTap: () => _onTabChanged(1)),
+                  _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile', isActive: _currentIndex == 2, onTap: () => _onTabChanged(2)),
                 ],
               ),
             ),
