@@ -4,6 +4,7 @@ import '../models/group.dart';
 
 class StorageService {
   static const String _groupsKey = 'groups';
+  static const String _defaultGroupIdKey = 'default_group_id';
 
   Future<List<Group>> loadGroups() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,16 +44,20 @@ class StorageService {
     await saveGroups(groups);
   }
 
-  static const String _defaultGroupKey = 'defaultGroupId';
+  // ── Default group ────────────────────────────────────────────────────────
 
-Future<String?> getDefaultGroupId() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString(_defaultGroupKey);
-}
+  Future<String?> getDefaultGroupId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_defaultGroupIdKey);
+  }
 
-Future<void> setDefaultGroupId(String groupId) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_defaultGroupKey, groupId);
-}
+  Future<void> saveDefaultGroupId(String groupId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_defaultGroupIdKey, groupId);
+  }
 
+  Future<void> clearDefaultGroupId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_defaultGroupIdKey);
+  }
 }

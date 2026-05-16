@@ -209,7 +209,7 @@ class _EmptyGroupsViewState extends State<_EmptyGroupsView> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         children: [
           // ── Başlık ────────────────────────────────────────────────
           const Text(

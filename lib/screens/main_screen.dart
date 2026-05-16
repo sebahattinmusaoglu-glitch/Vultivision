@@ -5,7 +5,7 @@ import '../services/storage_service.dart';
 import 'player_screen.dart';
 import 'groups_screen.dart';
 import 'settings_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'empty_state_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -17,10 +17,10 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final StorageService _storage = StorageService();
   List<Group> _groups = [];
-  bool _isLoading = true;
-  int _currentIndex = 1; // Groups tab varsayılan
   String? _defaultGroupId;
-  
+  bool _isLoading = true;
+  int _currentIndex = 1;
+  bool _isImmersive = false;
 
   @override
   void initState() {
@@ -29,16 +29,31 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _loadGroups() async {
-    final groups = await _storage.loadGroups();
-    final prefs = await SharedPreferences.getInstance();
-    final defaultId = prefs.getString('default_group_id');
+    final results = await Future.wait([
+      _storage.loadGroups(),
+      _storage.getDefaultGroupId(),
+    ]);
+
     if (mounted) {
       setState(() {
-        _groups = groups;
-        _defaultGroupId = defaultId;
+        _groups = results[0] as List<Group>;
+        _defaultGroupId = results[1] as String?;
         _isLoading = false;
       });
     }
+  }
+
+  void _onTabChanged(int index) {
+    final comingFromSettings = _currentIndex == 2 && index == 0;
+    setState(() {
+      _currentIndex = index;
+      if (index != 0) _isImmersive = false;
+    });
+    if (comingFromSettings) _loadGroups();
+  }
+
+  void _onImmersiveChanged(bool immersive) {
+    if (_currentIndex == 0) setState(() => _isImmersive = immersive);
   }
 
   @override
@@ -52,36 +67,39 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    // Grup yoksa Watch tab'ına erişim kapalı
-    final canWatch = _groups.isNotEmpty;
+    if (_groups.isEmpty) {
+      return EmptyStateScreen(onGroupCreated: _loadGroups);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: _buildBottomNav(canWatch),
+      bottomNavigationBar: AnimatedSlide(
+        offset: _isImmersive ? const Offset(0, 1) : Offset.zero,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        child: _buildBottomNav(),
+      ),
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          // Watch
           Material(
             color: Colors.black,
-            child: canWatch
-                ? PlayerScreen(
-                    groups: _groups,
-                    onGroupsChanged: _loadGroups,
-                    defaultGroupId: _defaultGroupId,
-                  )
-                : const SizedBox.shrink(),
+            child: PlayerScreen(
+              groups: _groups,
+              onGroupsChanged: _loadGroups,
+              defaultGroupId: _defaultGroupId,
+              onImmersiveChanged: _onImmersiveChanged,
+              onOpenSettings: () => _onTabChanged(2),
+            ),
           ),
-          // Groups
           Material(
             color: AppColors.background,
             child: GroupsScreen(
               groups: _groups,
               onGroupsChanged: _loadGroups,
-              onSwitchToWatch: () => setState(() => _currentIndex = 0),
+              onSwitchToWatch: () => _onTabChanged(0),
             ),
           ),
-          // Settings
           Material(
             color: AppColors.background,
             child: const SettingsScreen(),
@@ -91,58 +109,49 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildBottomNav(bool canWatch) {
+  Widget _buildBottomNav() {
     return Material(
-      color: AppColors.surface,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Colors.white.withOpacity(0.08),
-              width: 1,
+        color: AppColors.surface,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withOpacity(0.08),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            child: SizedBox(
+              height: 56,
+              child: Row(
+                children: [
+                  _NavItem(
+                    icon: Icons.tv_outlined,
+                    activeIcon: Icons.tv,
+                    label: 'Watch',
+                    isActive: _currentIndex == 0,
+                    onTap: () => _onTabChanged(0),
+                  ),
+                  _NavItem(
+                    icon: Icons.grid_view_outlined,
+                    activeIcon: Icons.grid_view,
+                    label: 'Groups',
+                    isActive: _currentIndex == 1,
+                    onTap: () => _onTabChanged(1),
+                  ),
+                  _NavItem(
+                    icon: Icons.person_outline,
+                    activeIcon: Icons.person,
+                    label: 'Settings',
+                    isActive: _currentIndex == 2,
+                    onTap: () => _onTabChanged(2),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 56,
-            child: Row(
-              children: [
-                _NavItem(
-                  icon: Icons.tv_outlined,
-                  activeIcon: Icons.tv,
-                  label: 'Watch',
-                  isActive: _currentIndex == 0,
-                  // Grup yoksa Watch'a geçiş engeli yok ama içerik boş;
-                  // daha iyi UX: Groups tab'ına yönlendir
-                  onTap: () {
-                    if (canWatch) {
-                      _loadGroups(); // her geçişte default group'u tazele
-                      setState(() => _currentIndex = 0);
-                    } else {
-                      setState(() => _currentIndex = 1);
-                    }
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.grid_view_outlined,
-                  activeIcon: Icons.grid_view,
-                  label: 'Groups',
-                  isActive: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  label: 'Settings',
-                  isActive: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
