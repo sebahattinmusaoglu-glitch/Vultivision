@@ -69,13 +69,44 @@ class GroupsScreen extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: groups.length,
+              itemCount: groups.length +1, // +1 for the "New group" button
               separatorBuilder: (_, __) => const Divider(
                 indent: 24,
                 endIndent: 24,
                 height: 1,
               ),
               itemBuilder: (context, index) {
+                // Eğer index sonuncu ise, "New group" butonunu göster
+                if (index == groups.length) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+                    child: GestureDetector(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NewGroupScreen(),
+                          ),
+                        );
+                        onGroupsChanged();
+                      },
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add, color: AppColors.primary, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'New group',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+    }
+                // Grup itemleri buradan başlar
                 final group = groups[index];
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -121,34 +152,6 @@ class GroupsScreen extends StatelessWidget {
             ),
           ),
 
-          // Alt — yeni grup ekle
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: GestureDetector(
-              onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const NewGroupScreen(),
-                  ),
-                );
-                onGroupsChanged();
-              },
-              child: const Row(
-                children: [
-                  Icon(Icons.add, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'New group',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

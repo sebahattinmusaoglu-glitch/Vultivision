@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../core/constants/app_colors.dart';
 import '../models/group.dart';
 import '../services/storage_service.dart';
@@ -59,35 +60,34 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           children: [
             // ── Üst bar ─────────────────────────────────────────────
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Başlık ───────────────────────────────────────────────
-            const Text(
-              'Groups',
-              style: TextStyle(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+              const Text(
+                'Groups',
+                style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
+                ),
               ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                ),
+                child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 16,
+                ),
+                ),
+              ),
+              ],
             ),
+            // ── Açıklama ───────────────────────────────────────────────
             const SizedBox(height: 6),
             const Text(
               'Add your category name\nand watch YouTube as a TV.',
@@ -189,10 +189,14 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
                     color: AppColors.primary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.grid_view_rounded,
-                    color: AppColors.primary,
-                    size: 16,
+                  child: SvgPicture.asset(
+                    'assets/icons/group_icon.svg',
+                    width: 16,
+                    height: 16,
+                    colorFilter: ColorFilter.mode(
+                      AppColors.primary,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

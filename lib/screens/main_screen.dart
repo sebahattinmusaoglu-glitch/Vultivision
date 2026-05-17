@@ -93,6 +93,7 @@ class _MainScreenState extends State<MainScreen> {
             child: PlayerScreen(
               groups: _groups,
               onGroupsChanged: _loadGroups,
+              isActive: _currentIndex == 0 || _currentIndex == 2, // Gruplar veya Profil sekmesindeyken video duraklatılır
               defaultGroupId: _defaultGroupId,
               onImmersiveChanged: _onImmersiveChanged,
               onOpenSettings: () => _onTabChanged(2),

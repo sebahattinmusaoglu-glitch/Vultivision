@@ -8,6 +8,7 @@ import '../widgets/youtube_webview_player.dart';
 import 'group_selection_sheet.dart';
 import 'profile_screen.dart';
 import '../services/storage_service.dart';
+import 'package:flutter/services.dart';
 
 class PlayerScreen extends StatefulWidget {
   final List<Group> groups;
@@ -15,6 +16,7 @@ class PlayerScreen extends StatefulWidget {
   final String? defaultGroupId;
   final ValueChanged<bool>? onImmersiveChanged;
   final VoidCallback? onOpenSettings;
+  final bool isActive;
 
   const PlayerScreen({
     super.key,
@@ -23,6 +25,7 @@ class PlayerScreen extends StatefulWidget {
     this.defaultGroupId,
     this.onImmersiveChanged,
     this.onOpenSettings,
+    this.isActive = true,
   });
 
   @override
@@ -46,6 +49,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // ← ekle
     _currentGroup = widget.groups.firstWhere(
       (g) => g.id == widget.defaultGroupId,
       orElse: () => widget.groups.first,
@@ -53,7 +57,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     StorageService().getExcludeShorts().then((v) {
       if (mounted) {
         setState(() => _excludeShorts = v);
-        _loadRandomVideo();        // ← tercih geldikten sonra yükle
+        _loadRandomVideo();
         _startHideControlsTimer();
       }
     });
@@ -87,6 +91,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); // ← ekle
     _hideControlsTimer?.cancel();
     super.dispose();
   }
@@ -192,45 +197,50 @@ class _PlayerScreenState extends State<PlayerScreen> {
               videoId: _currentVideo!.id,
               onVideoEnded: _loadRandomVideo,
               onError: _loadRandomVideo,
+              isActive: widget.isActive,
             ),
 
           // ── 3. Alt gradient ─────────────────────────────────────────────
-          const Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 250,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Color(0xCC000000),
-                      Colors.black,
-                    ],
-                    stops: [0.0, 0.6, 1.0],
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              height: 250,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _controlsVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Color(0xCC000000),
+                          Colors.black,
+                        ],
+                        stops: [0.0, 0.6, 1.0],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
           // ── 4. Üst gradient ─────────────────────────────────────────────
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            Positioned(
+            top: 0, left: 0, right: 0,
             height: 120,
             child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xAA000000), Colors.transparent],
+              child: AnimatedOpacity(
+                opacity: _controlsVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 250),
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xAA000000), Colors.transparent],
+                    ),
                   ),
                 ),
               ),

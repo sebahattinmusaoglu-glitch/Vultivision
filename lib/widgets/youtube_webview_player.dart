@@ -7,12 +7,14 @@ class YoutubeWebViewPlayer extends StatefulWidget {
   final String videoId;
   final VoidCallback? onVideoEnded;
   final VoidCallback? onError;
+  final bool isActive;
 
   const YoutubeWebViewPlayer({
     super.key,
     required this.videoId,
     this.onVideoEnded,
     this.onError,
+    this.isActive = true,
   });
 
   @override
@@ -82,10 +84,20 @@ class _YoutubeWebViewPlayerState extends State<YoutubeWebViewPlayer> {
   void didUpdateWidget(YoutubeWebViewPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.videoId != widget.videoId) {
+      _controller.runJavaScript('''
+        var overlay = document.getElementById('overlay');
+        if (overlay) { overlay.style.display = 'block'; overlay.style.opacity = '1'; }
+      ''');      
       _controller.loadHtmlString(
         _buildHtml(widget.videoId),
-        baseUrl: _origin,
-      );
+        baseUrl: _origin);
+    }
+    if (oldWidget.isActive != widget.isActive) {
+      if (widget.isActive) {
+        _controller.runJavaScript('if(player) player.pauseVideo();');
+      } else {
+        _controller.runJavaScript('if(player) player.playVideo();');
+      }
     }
   }
 
@@ -109,11 +121,23 @@ class _YoutubeWebViewPlayerState extends State<YoutubeWebViewPlayer> {
       top: 0; left: 0;
       width: 100%; height: 100%;
     }
+
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+
+
   </style>
-  <script async src="https://static.doubleclick.net/instream/ad_status.js"></script>
+
 </head>
 <body>
   <div id="player"></div>
+  <div id="overlay"></div>  
   <script>
     var tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
@@ -139,7 +163,10 @@ class _YoutubeWebViewPlayerState extends State<YoutubeWebViewPlayer> {
             setTimeout(function() {
               event.target.unMute();
               event.target.setVolume(100);
-            }, 300);
+              var overlay = document.getElementById('overlay');
+              overlay.style.opacity = '0';
+              setTimeout(function() { overlay.style.display = 'none'; }, 800);
+            }, 800);
           },
           onStateChange: function(event) {
             if (event.data === YT.PlayerState.ENDED) {
