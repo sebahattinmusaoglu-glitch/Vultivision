@@ -130,9 +130,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final user = snapshot.data;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
             children: [
-            // Başlık
+            // logo + type
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -161,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Settings başlığı (mevcut 'Settings' Text'ini koru)
             const Text(
-              'My Settings',
+              'My Groups',
               style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 28,

@@ -37,7 +37,7 @@ class GroupsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo + uygulama adı
+                // Logo + type
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center, // ← ortaya hizala
                   children: [
