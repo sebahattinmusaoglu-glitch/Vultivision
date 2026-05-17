@@ -4,6 +4,7 @@ import '../models/channel.dart';
 import '../models/group.dart';
 import '../services/storage_service.dart';
 import '../services/youtube_service.dart';
+import 'dart:async';
 
 class ChannelSearchScreen extends StatefulWidget {
   final String groupName;
@@ -31,6 +32,7 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
   bool _isSearching = false;
   bool _isSaving = false;
   String? _error;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -117,6 +119,7 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -226,6 +229,12 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
                 ),
                 textInputAction: TextInputAction.search,
                 onSubmitted: _search,
+                onChanged: (value) {
+                  _debounce?.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 500), () {
+                    _search(value);
+                  });
+                },
               ),
             ),
 

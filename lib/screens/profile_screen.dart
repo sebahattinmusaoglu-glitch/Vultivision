@@ -6,6 +6,7 @@ import '../models/group.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import 'profile_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 // SharedPreferences key — StorageService ile tutarlı olsun diye burada sabit
 const _kDefaultGroupKey = 'default_group_id';
@@ -129,36 +130,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final user = snapshot.data;
 
           return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              // Başlık
-              const Text(
-                'Settings',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+            // Başlık
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/logo.svg',
+                  width: 28,
+                  height: 28,
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.primary,
+                    BlendMode.srcIn,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 28),
-
-              // ── Hesap ──────────────────────────────────────────────
-              const _SectionHeader(label: 'Account'),
-              const SizedBox(height: 12),
-              if (user == null)
-                _SignInCard(onSignIn: _handleSignIn)
-              else ...[
-                _AccountCard(user: user, onSignOut: _handleSignOut),
-                const SizedBox(height: 10),
-                _YouTubeScopeCard(
-                  granted: _youtubeGranted,
-                  loading: _checkingScope,
-                  onRequest: _handleRequestScope,
+                const SizedBox(width: 10),
+                const Text(
+                  'Vultivision',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
 
-              const SizedBox(height: 28),
+            // Settings başlığı (mevcut 'Settings' Text'ini koru)
+            const Text(
+              'My Settings',
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
 
 // ── Varsayılan grup ────────────────────────────────────
               const _SectionHeader(label: 'Default Group'),

@@ -4,6 +4,7 @@ import '../models/group.dart';
 import 'channel_search_screen.dart';
 import 'group_detail_screen.dart';
 import 'new_group_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class GroupsScreen extends StatelessWidget {
   final List<Group> groups;
@@ -32,32 +33,66 @@ class GroupsScreen extends StatelessWidget {
         children: [
           // Üst bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 16, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'My Groups',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const NewGroupScreen(),
+                // Logo + uygulama adı
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center, // ← ortaya hizala
+                  children: [
+                    SvgPicture.asset(
+                      'assets/icons/logo.svg',
+                      width: 28,
+                      height: 28,
+                      colorFilter: const ColorFilter.mode(
+                        AppColors.primary,
+                        BlendMode.srcIn,
                       ),
-                    );
-                    onGroupsChanged();
-                  },
-                  icon: const Icon(
-                    Icons.add,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Vultivision',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // My Groups başlığı + ekle butonu
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'My Groups',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NewGroupScreen(),
+                          ),
+                        );
+                        onGroupsChanged();
+                      },
+                      icon: const Icon(
+                        Icons.add,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
