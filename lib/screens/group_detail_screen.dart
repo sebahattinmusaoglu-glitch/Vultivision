@@ -88,6 +88,47 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+    Future<void> _renameGroup() async {
+    final controller = TextEditingController(text: _group.name);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Rename group',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(hintText: 'Group name'),
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save',
+                style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+
+    if (newName != null && newName.isNotEmpty && newName != _group.name) {
+      final updated = _group.copyWith(name: newName);
+      setState(() => _group = updated);
+      await _storage.updateGroup(updated);
+      widget.onGroupChanged();
+    }
+  }
+
   // ─── Abonelik import ──────────────────────────────────────────────────
 
   Future<void> _importFromSubscriptions() async {
@@ -209,26 +250,39 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _group.name,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                    child: GestureDetector(
+                      onTap: _renameGroup,
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _group.name,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.edit_outlined,
+                                  color: AppColors.textTertiary, size: 16),
+                            ],
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${_group.channels.length} channel${_group.channels.length != 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
+                          Text(
+                            '${_group.channels.length} channel${_group.channels.length != 1 ? 's' : ''}',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   IconButton(
